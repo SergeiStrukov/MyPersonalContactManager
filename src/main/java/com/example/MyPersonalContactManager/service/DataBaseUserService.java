@@ -7,42 +7,46 @@ import com.example.MyPersonalContactManager.models.UserModels.User;
 import com.example.MyPersonalContactManager.models.UserModels.UserDTOLogin;
 import com.example.MyPersonalContactManager.models.UserModels.UserDTORegister;
 import com.example.MyPersonalContactManager.models.UserModels.UserDTOResponse;
-import com.example.MyPersonalContactManager.repository.InterfaceUserRepository;
+import com.example.MyPersonalContactManager.repository.UserRepository;
 import com.example.MyPersonalContactManager.utils.UtilsRegistration;
 import com.example.MyPersonalContactManager.utils.UtilsUserAuthorization;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @AllArgsConstructor
 public class DataBaseUserService implements InterfaceUserService {
 
-    private final InterfaceUserRepository<User> userRepository;
-    private UtilsRegistration utilsRegistration;
-    private UtilsUserAuthorization utilsUserAuth;
+    private final UserRepository userRepository;
+    private final UtilsRegistration utilsRegistration;
+    private final UtilsUserAuthorization utilsUserAuth;
 
     @Override
+    @Transactional
     public UserDTOResponse registerUser(UserDTORegister userDTORegister) {
-        User existingUser = userRepository.getUserByLogin(userDTORegister.getLogin());
-        if (utilsRegistration.checkExistingUser(existingUser, userDTORegister)) {
+        User existingUser = userRepository.findByLogin(userDTORegister.getLogin());
+        if (existingUser != null) {
             throw new UserAlreadyExistsException("User already exists");
         }
 
         if (!utilsRegistration.checkCorrectPassword(userDTORegister.getPassword())) {
-            throw new EasyUserPasswordException("You password is too easy");
+            throw new EasyUserPasswordException("Your password is too easy");
         }
+
         User newUser = new User();
         newUser.setLogin(userDTORegister.getLogin());
         newUser.setPassword(userDTORegister.getPassword());
         newUser.setUserName(userDTORegister.getName());
         newUser.setRole(false);
 
-        userRepository.createUser(newUser);
+        userRepository.save(newUser);
 
         String token = utilsRegistration.generateToken(newUser.getLogin(), newUser.getPassword());
-        userRepository.saveToken(token, String.valueOf(newUser.getUserId()));
+        saveToken(token, newUser.getUserId());
         return UserDTOResponse.builder()
                 .login(newUser.getLogin())
                 .token(token)
@@ -50,14 +54,15 @@ public class DataBaseUserService implements InterfaceUserService {
     }
 
     @Override
+    @Transactional
     public UserDTOResponse loginUser(UserDTOLogin userDTOLogin) {
-        User existingUser = userRepository.getUserByLogin(userDTOLogin.getLogin());
-        if (!utilsUserAuth.checkExistingUser(existingUser, userDTOLogin)) {
+        User existingUser = userRepository.findByLogin(userDTOLogin.getLogin());
+        if (existingUser == null || !existingUser.getPassword().equals(userDTOLogin.getPassword())) {
             throw new InvalidLoginPasswordException("Invalid login or password.");
         }
 
         String token = utilsRegistration.generateToken(userDTOLogin.getLogin(), userDTOLogin.getPassword());
-        userRepository.saveToken(token, String.valueOf(existingUser.getUserId()));
+        saveToken(token, existingUser.getUserId());
         return UserDTOResponse.builder()
                 .token(token)
                 .build();
@@ -65,21 +70,29 @@ public class DataBaseUserService implements InterfaceUserService {
 
     @Override
     public User getUserById(String userId) {
-        return userRepository.getUserById(String.valueOf(userId));
+        return userRepository.findById(userId).orElse(null);
     }
 
     @Override
     public List<User> getAllUsers() {
-        return userRepository.getAllUsers();
+        return userRepository.findAll();
     }
 
     @Override
     public boolean deleteUserById(String userId) {
-        return userRepository.deleteUserById(userId);
+        if (userRepository.existsById(userId)) {
+            userRepository.deleteById(userId);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public UserDTOResponse updateUser(User user) {
+        if (userRepository.existsById(user.getUserId())) {
+            // Implement proper update logic
+            return UserDTOResponse.builder().build();
+        }
         return null;
     }
 
@@ -90,11 +103,19 @@ public class DataBaseUserService implements InterfaceUserService {
 
     @Override
     public String getUserIdByToken(String token) {
-        return userRepository.getUserIdByToken(token);
+        return userRepository.findUserIdByToken(token);
     }
 
     @Override
     public boolean getUserRoleByToken(String token) {
-        return userRepository.getUserRoleByToken(token);
+        return userRepository.existsByToken(token);
+    }
+
+    private void saveToken(String token, String userId) {
+        if (!userRepository.existsByToken(token)) {
+            userRepository.insertToken(token, userId, LocalDateTime.now(), LocalDateTime.now());
+        } else {
+            userRepository.updateToken(token, userId, LocalDateTime.now());
+        }
     }
 }

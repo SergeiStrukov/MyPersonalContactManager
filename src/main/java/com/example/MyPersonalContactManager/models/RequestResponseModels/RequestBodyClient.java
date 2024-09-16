@@ -9,16 +9,15 @@ import lombok.Setter;
 
 import java.util.List;
 
+@Getter
+@Setter
 public class RequestBodyClient {
     @Valid
-    @Getter
-    @Setter
     public Contact contact;
     public ContactDTOShort contactDTOShort;
     public ContactDTOBig contactDTOBig;
     public String userId;
     public List<String> phoneNumberList;
-
     public List<Contact> contactList;
 
     public ContactDTOShort getContactDTO() {
@@ -29,5 +28,3 @@ public class RequestBodyClient {
         this.contactDTOShort = contactDTOShort;
     }
 }
-
-

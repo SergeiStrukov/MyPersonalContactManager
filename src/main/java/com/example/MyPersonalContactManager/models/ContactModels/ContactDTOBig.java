@@ -2,33 +2,40 @@ package com.example.MyPersonalContactManager.models.ContactModels;
 
 import com.example.MyPersonalContactManager.utils.UtilsContact;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import static com.example.MyPersonalContactManager.utils.ConstantsContact.DEFAULT_BIRTHDAY;
 
+@Entity
 @Getter
 @Setter
 public class ContactDTOBig {
-    @NotBlank
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
     private String firstName;
     private String lastName;
     private String email;
-    @NotBlank
+
+    @ElementCollection
     private List<String> phones;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate birthday;
+
     private String address;
-    private URL photo;
+    private String photo;
     private LocalDateTime lastUpdateDate;
 
-    public ContactDTOBig(String firstName, String lastName, String email, List<String> phones, LocalDate birthday, String address, URL photo) {
+    public ContactDTOBig(String firstName, String lastName, String email, List<String> phones, LocalDate birthday, String address, String photo) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -64,13 +71,14 @@ public class ContactDTOBig {
     @Override
     public String toString() {
         return "ContactDTOBig{" +
-                "firstName='" + firstName + '\'' +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
-                ", phone='" + phones + '\'' +
+                ", phones=" + phones +
                 ", birthday=" + birthday +
                 ", address='" + address + '\'' +
-                ", photo=" + photo +
+                ", photo='" + photo + '\'' +
                 ", lastUpdateDate=" + lastUpdateDate +
                 '}';
     }

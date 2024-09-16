@@ -1,68 +1,96 @@
 package com.example.MyPersonalContactManager.service;
 
+import com.example.MyPersonalContactManager.exceptions.ContactNotFoundException;
 import com.example.MyPersonalContactManager.models.ContactModels.Contact;
 import com.example.MyPersonalContactManager.models.ContactModels.ContactDTOBig;
-import com.example.MyPersonalContactManager.repository.DatabaseContactRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import com.example.MyPersonalContactManager.repository.ContactRepository;
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
-@Component
+@Service
+@AllArgsConstructor
 public class DatabaseContactService implements ContactServiceInterface<Contact, ContactDTOBig> {
-    public DatabaseContactService(DatabaseContactRepository dbRepository) {
-        this.dbRepository = dbRepository;
-    }
 
-    @Autowired
-    private DatabaseContactRepository dbRepository;
+    private final ContactRepository dbRepository;
 
     @Override
-    public Contact getContactById(String contactId) {
-        Contact tempContact = dbRepository.getContactByContactId(contactId);
-        List<String> phoneList = dbRepository.getPhoneListByContactId(contactId);
-        tempContact.setPhones(phoneList);
-        return tempContact;
-    }
-
-    public List<Contact> getContactByUserId(String userId) {
-        List<Contact> tempContact = dbRepository.getContactByUserId(userId);
-        for (int i = 0; i < tempContact.size(); i++) {
-            List<String> phoneList = dbRepository.getPhoneListByContactId(tempContact.get(i).getId());
-            tempContact.get(i).setPhones(phoneList);
-        }
-        return tempContact;
+    @Transactional(readOnly = true)
+    public Contact getContactById(UUID contactId) {
+        return dbRepository.findById(contactId)
+                .map(contact -> {
+                    List<String> phoneList = dbRepository.getPhoneListByContactId(contactId);
+                    contact.setPhones(phoneList);
+                    return contact;
+                })
+                .orElseThrow(() -> new ContactNotFoundException("Contact not found with id: " + contactId));
     }
 
     @Override
-    public List<Contact> getAllContacts() {
-        List<Contact> tempListAllContacts = dbRepository.getAllContacts();
-        for (Contact contact : tempListAllContacts) {
+    @Transactional(readOnly = true)
+    public List<Contact> getContactByUserId(UUID userId) {
+        List<Contact> contacts = dbRepository.findByUserId(userId);
+        for (Contact contact : contacts) {
             List<String> phoneList = dbRepository.getPhoneListByContactId(contact.getId());
             contact.setPhones(phoneList);
         }
-        return tempListAllContacts;
+        return contacts;
     }
 
     @Override
-    public Contact createContact(Contact contact, String userID) {
-        Contact tempContact = dbRepository.createContact(contact, userID);
-//        List<String> phoneList = dbRepository.createPhone(contact.getPhones(), tempContact.getId());
-//        tempContact.setPhones(phoneList);
-        return tempContact;
+    @Transactional(readOnly = true)
+    public List<Contact> getAllContacts() {
+        List<Contact> contacts = dbRepository.findAll();
+        for (Contact contact : contacts) {
+            List<String> phoneList = dbRepository.getPhoneListByContactId(contact.getId());
+            contact.setPhones(phoneList);
+        }
+        return contacts;
     }
 
     @Override
-    public ContactDTOBig updateContact(String contactId, ContactDTOBig newContact) {
-        return dbRepository.updateContact(contactId, newContact);
+    @Transactional
+    public Contact createContact(Contact contact, UUID ownerId) {
+        contact.setOwnerId(ownerId); // Присвойте userId контакту
+        return dbRepository.save(contact); // Используйте save для сохранения контакта
     }
 
     @Override
-    public boolean deleteContactById(String contactId) {
-        return dbRepository.deleteContactById(contactId);
+    @Transactional
+    public ContactDTOBig updateContact(UUID contactId, ContactDTOBig newContact) {
+        Contact existingContact = dbRepository.findById(contactId)
+                .orElseThrow(() -> new ContactNotFoundException("Contact not found with id: " + contactId));
+
+        // Обновите существующий контакт с новыми данными
+        existingContact.setFirstName(newContact.getFirstName());
+        existingContact.setLastName(newContact.getLastName());
+        existingContact.setEmail(newContact.getEmail());
+        existingContact.setPhones(newContact.getPhones());
+
+        // Преобразуйте LocalDate в String для birthday
+        existingContact.setBirthday(newContact.getBirthday() != null ? newContact.getBirthday().toString() : null);
+        existingContact.setAddress(newContact.getAddress());
+        existingContact.setPhoto(newContact.getPhoto());
+
+        dbRepository.save(existingContact); // Сохраните обновленный контакт
+        return newContact;
     }
 
-    public String getOwnerId(String contactId) {
+    @Override
+    @Transactional
+    public boolean deleteContactById(UUID contactId) {
+        if (!dbRepository.existsById(contactId)) {
+            throw new ContactNotFoundException("Contact not found with id: " + contactId);
+        }
+        dbRepository.deleteById(contactId);
+        return true;
+    }
+
+    @Override
+    public UUID getOwnerId(UUID contactId) {
         return dbRepository.getOwnerId(contactId);
     }
 }

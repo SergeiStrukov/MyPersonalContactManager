@@ -1,5 +1,7 @@
 package com.example.MyPersonalContactManager.models.ContactModels;
 
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +14,9 @@ public class Phone {
     private String phoneNumber;
     private LocalDateTime createDate;
     private LocalDateTime lastUpdateDate;
+    @ManyToOne
+    @JoinColumn(name = "contact_id")
+    private Contact contact;
 
     public Phone(String phoneNumber) {
         this.phoneNumber = phoneNumber;

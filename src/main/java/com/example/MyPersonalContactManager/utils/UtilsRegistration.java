@@ -14,7 +14,6 @@ public class UtilsRegistration {
         Random random = new Random();
         StringBuilder randomFiveDigits = new StringBuilder();
 
-        //генерация первых 5 случайных цифр
         for (int i = 0; i < 5; i++) {
             randomFiveDigits.append(random.nextInt(10));
         }
@@ -45,7 +44,6 @@ public class UtilsRegistration {
             } else if (Character.isDigit(currentChar)) {
                 hasDigit = true;
             }
-            // Если цифра и спецсимвол есть, то break;
             if (hasDigit && hasSpecialChar) {
                 break;
             }
