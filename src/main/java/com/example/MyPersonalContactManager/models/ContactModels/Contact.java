@@ -19,7 +19,6 @@ public class Contact {
     private String firstName;
     private String lastName;
     private String email;
-    private List<String> phones;
     private String birthday;
     private String address;
     private String photo;

@@ -1,7 +1,6 @@
 package com.example.MyPersonalContactManager.repository;
 
 import com.example.MyPersonalContactManager.models.ContactModels.Contact;
-import com.example.MyPersonalContactManager.models.ContactModels.Phone;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,7 +15,7 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
     Optional<Contact> findById(UUID id);
 
     @Query("SELECT p FROM Phone p WHERE p.contact.id = :contactId")
-    List<Phone> getPhoneListByContactId(@Param("contactId") UUID contactId);
+    List<String> getPhoneListByContactId(@Param("contactId") UUID contactId);
 
     List<Contact> findByUserId(UUID userId);
 

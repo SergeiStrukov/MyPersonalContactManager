@@ -1,15 +1,17 @@
 package com.example.MyPersonalContactManager.models.ContactModels;
 
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+@Entity
 @Getter
 @Setter
 public class Phone {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private String id;
     private String phoneNumber;
     private LocalDateTime createDate;

@@ -3,6 +3,7 @@ package com.example.MyPersonalContactManager.service;
 import com.example.MyPersonalContactManager.exceptions.ContactNotFoundException;
 import com.example.MyPersonalContactManager.models.ContactModels.Contact;
 import com.example.MyPersonalContactManager.models.ContactModels.ContactDTOBig;
+import com.example.MyPersonalContactManager.models.ContactModels.Phone;
 import com.example.MyPersonalContactManager.repository.ContactRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,8 +23,7 @@ public class DatabaseContactService implements ContactServiceInterface<Contact, 
     public Contact getContactById(UUID contactId) {
         return dbRepository.findById(contactId)
                 .map(contact -> {
-                    List<String> phoneList = dbRepository.getPhoneListByContactId(contactId);
-                    contact.setPhones(phoneList);
+                    // Здесь телефоны будут загружены вместе с контактами
                     return contact;
                 })
                 .orElseThrow(() -> new ContactNotFoundException("Contact not found with id: " + contactId));
@@ -34,8 +34,7 @@ public class DatabaseContactService implements ContactServiceInterface<Contact, 
     public List<Contact> getContactByUserId(UUID userId) {
         List<Contact> contacts = dbRepository.findByUserId(userId);
         for (Contact contact : contacts) {
-            List<String> phoneList = dbRepository.getPhoneListByContactId(contact.getId());
-            contact.setPhones(phoneList);
+            // Телефоны загружаются вместе с контактами
         }
         return contacts;
     }
@@ -45,8 +44,7 @@ public class DatabaseContactService implements ContactServiceInterface<Contact, 
     public List<Contact> getAllContacts() {
         List<Contact> contacts = dbRepository.findAll();
         for (Contact contact : contacts) {
-            List<String> phoneList = dbRepository.getPhoneListByContactId(contact.getId());
-            contact.setPhones(phoneList);
+            // Телефоны загружаются вместе с контактами
         }
         return contacts;
     }
@@ -68,12 +66,19 @@ public class DatabaseContactService implements ContactServiceInterface<Contact, 
         existingContact.setFirstName(newContact.getFirstName());
         existingContact.setLastName(newContact.getLastName());
         existingContact.setEmail(newContact.getEmail());
-        existingContact.setPhones(newContact.getPhones());
-
-        // Преобразуйте LocalDate в String для birthday
         existingContact.setBirthday(newContact.getBirthday() != null ? newContact.getBirthday().toString() : null);
         existingContact.setAddress(newContact.getAddress());
         existingContact.setPhoto(newContact.getPhoto());
+
+        // Обновите телефоны, если необходимо
+        List<Phone> updatedPhones = newContact.getPhones().stream()
+                .map(phoneNumber -> {
+                    Phone phone = new Phone(phoneNumber);
+                    phone.setContact(existingContact);
+                    return phone;
+                })
+                .toList();
+        existingContact.setPhonesList(updatedPhones);
 
         dbRepository.save(existingContact); // Сохраните обновленный контакт
         return newContact;
